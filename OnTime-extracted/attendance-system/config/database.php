@@ -1,14 +1,13 @@
 <?php
 // ============================================================
 //  Database Configuration
-//  Values can be overridden with environment variables in Docker.
+//  XAMPP default database connection.
 // ============================================================
 
-define('DB_HOST',    getenv('DB_HOST') ?: 'localhost');
-define('DB_PORT',    (int) (getenv('DB_PORT') ?: 3306));
-define('DB_NAME',    getenv('DB_NAME') ?: 'attendance_system');
-define('DB_USER',    getenv('DB_USER') ?: 'root');
-define('DB_PASS',    getenv('DB_PASS') ?: '');
+define('DB_HOST',    'localhost');
+define('DB_NAME',    'attendance_system');
+define('DB_USER',    'root');
+define('DB_PASS',    '');
 define('DB_CHARSET', 'utf8mb4');
 
 /**
@@ -22,7 +21,6 @@ function getDB(): PDO
     if ($pdo === null) {
         try {
             $dsn = 'mysql:host=' . DB_HOST
-                 . ';port='    . DB_PORT
                  . ';dbname='   . DB_NAME
                  . ';charset='  . DB_CHARSET;
 
