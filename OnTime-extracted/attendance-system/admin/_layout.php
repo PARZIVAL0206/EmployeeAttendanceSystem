@@ -20,7 +20,7 @@ function adminPageStart(string $title, string $subtitle = ''): void
     ?>
     <div class="main-content">
         <header class="top-header">
-            <div class="header-left"><button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><?= uiIcon('menu') ?></button><strong><?= adminEscape($title) ?></strong></div>
+            <div class="header-left"><button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><?= uiIcon('menu') ?></button><strong><?= adminEscape($title) ?></strong></div>
             <div class="header-right"><span class="header-user-name"><?= adminEscape($_SESSION['full_name'] ?? 'Administrator') ?></span></div>
         </header>
         <main class="page-content">

@@ -23,6 +23,7 @@ function uiIcon(string $name): string
         'hourglass' => '<path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 2 4l3 2-3 2a5 5 0 0 0-2 4v4M17 2v4a5 5 0 0 1-2 4l-3 2 3 2a5 5 0 0 1 2 4v4"/>',
         'arrow-right' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
         'arrow-left' => '<path d="M19 12H5m6 6-6-6 6-6"/>',
+        'chevron-left' => '<path d="m15 18-6-6 6-6"/>',
         default => '',
     };
 

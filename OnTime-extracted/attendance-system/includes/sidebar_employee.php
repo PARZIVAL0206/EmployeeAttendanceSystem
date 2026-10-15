@@ -51,7 +51,12 @@ function empSidebarBadge(int $count): string {
     <button class="sidebar-close" id="sidebarClose" aria-label="Close menu"><?= uiIcon('close') ?></button>
 
     <div class="sidebar-brand">
-        <div class="sidebar-brand-name">OnTime</div>
+        <div class="sidebar-brand-head">
+            <div class="sidebar-brand-name">OnTime</div>
+            <button class="sidebar-collapse" id="sidebarCollapse" type="button" aria-label="Collapse navigation" aria-pressed="false" title="Collapse navigation">
+                <?= uiIcon('chevron-left') ?>
+            </button>
+        </div>
         <div class="sidebar-brand-tagline">Attendance Management · AICS</div>
     </div>
 
@@ -98,6 +103,7 @@ function empSidebarBadge(int $count): string {
 /* ── Employee sidebar styles ─────────────────────────────────── */
 .sidebar {
     width: 240px;
+    height: 100vh;
     min-height: 100vh;
     background: linear-gradient(180deg, #102f2b 0%, #17473f 62%, #1d5b4f 100%);
     color: #fff;
@@ -189,12 +195,39 @@ function empSidebarBadge(int $count): string {
     var overlay  = document.getElementById('sidebarOverlay');
     var closeBtn = document.getElementById('sidebarClose');
     var openBtn  = document.getElementById('hamburgerBtn');
+    var collapseBtn = document.getElementById('sidebarCollapse');
+    var collapsed = false;
 
-    function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); }
-    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+    try {
+        collapsed = localStorage.getItem('ontimeSidebarCollapsed') === 'true'
+            && window.matchMedia('(min-width: 769px)').matches;
+    } catch (error) {}
 
+    function setCollapsed(value, persist) {
+        document.body.classList.toggle('sidebar-collapsed', value);
+        if (collapseBtn) {
+            collapseBtn.setAttribute('aria-pressed', String(value));
+            collapseBtn.setAttribute('aria-label', value ? 'Expand navigation' : 'Collapse navigation');
+            collapseBtn.title = value ? 'Expand navigation' : 'Collapse navigation';
+        }
+        if (persist) {
+            try { localStorage.setItem('ontimeSidebarCollapsed', String(value)); } catch (error) {}
+        }
+    }
+
+    function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); if (openBtn) openBtn.setAttribute('aria-expanded', 'true'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); if (openBtn) openBtn.setAttribute('aria-expanded', 'false'); }
+
+    setCollapsed(collapsed, false);
     if (openBtn)  openBtn.addEventListener('click', openSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay)  overlay.addEventListener('click', closeSidebar);
+    document.addEventListener('click', function (event) {
+        var target = event.target;
+        var button = target && target.closest ? target.closest('#sidebarCollapse') : null;
+        if (!button) return;
+        event.preventDefault();
+        setCollapsed(!document.body.classList.contains('sidebar-collapsed'), true);
+    });
 })();
 </script>

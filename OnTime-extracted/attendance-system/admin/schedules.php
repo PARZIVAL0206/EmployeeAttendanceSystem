@@ -56,32 +56,201 @@ $assignments = $db->query("
 
 adminPageStart('Schedule Management', 'Create work schedules and assign them to employees.');
 ?>
-<div class="card"><div class="card-header"><h3>Create Schedule</h3></div><div class="card-body">
-    <form method="post" class="form-grid"><?= csrfInput() ?><input type="hidden" name="action" value="create_schedule">
-        <label class="form-group"><span class="form-label">Schedule name</span><input class="form-control" name="schedule_name" maxlength="150" required></label>
-        <label class="form-group"><span class="form-label">Time in</span><input class="form-control" type="time" name="time_in" required></label>
-        <label class="form-group"><span class="form-label">Time out</span><input class="form-control" type="time" name="time_out" required></label>
-        <fieldset class="form-group"><legend class="form-label">Work days</legend><?php foreach (['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as $day): ?><label class="checkbox-inline"><input type="checkbox" name="work_days[]" value="<?= $day ?>" <?= in_array($day, ['Mon','Tue','Wed','Thu','Fri'], true) ? 'checked' : '' ?>> <?= $day ?></label><?php endforeach; ?></fieldset>
-        <label class="form-group"><span class="form-label">Grace minutes</span><input class="form-control" type="number" min="0" max="240" name="grace_period_minutes" value="15" required></label>
-        <label class="form-group"><span class="form-label">Break minutes</span><input class="form-control" type="number" min="0" max="480" name="break_duration_minutes" value="60" required></label>
-        <label class="form-group"><span class="form-label">Required hours</span><input class="form-control" type="number" min="0.25" max="24" step="0.25" name="required_hours" value="8" required></label>
-        <label class="form-group checkbox-inline"><input type="checkbox" name="is_overnight" value="1"> Overnight shift</label>
-        <div><button class="btn btn-primary">Create schedule</button></div>
-    </form>
-</div></div>
-<div class="card"><div class="card-header"><h3>Assign Schedule</h3></div><div class="card-body">
-<?php if ($employees && $schedules): ?><form method="post" class="form-inline"><?= csrfInput() ?><input type="hidden" name="action" value="assign_schedule">
-    <label class="form-label">Employee <select class="form-control" name="employee_id" required><?php foreach ($employees as $employee): ?><option value="<?= (int)$employee['id'] ?>"><?= adminEscape($employee['full_name'] . ' (' . $employee['employee_code'] . ')') ?></option><?php endforeach; ?></select></label>
-    <label class="form-label">Schedule <select class="form-control" name="schedule_id" required><?php foreach ($schedules as $schedule): ?><option value="<?= (int)$schedule['id'] ?>"><?= adminEscape($schedule['schedule_name']) ?></option><?php endforeach; ?></select></label>
-    <label class="form-label">Effective date <input class="form-control" type="date" name="effective_date" value="<?= date('Y-m-d') ?>" required></label><button class="btn btn-primary">Assign</button>
-</form><?php else: ?><p>Add an active employee and a schedule before making assignments.</p><?php endif; ?>
-</div></div>
-<div class="card"><div class="card-header"><h3>Schedules</h3></div><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Name</th><th>Hours</th><th>Work days</th><th>Grace / Break</th><th>Required</th></tr></thead><tbody>
-<?php foreach ($schedules as $schedule): ?><tr><td><?= adminEscape($schedule['schedule_name']) ?><br><?= adminEscape(date('g:i A', strtotime($schedule['time_in']))) ?> – <?= adminEscape(date('g:i A', strtotime($schedule['time_out']))) ?></td><td><?= adminEscape($schedule['is_overnight'] ? 'Overnight' : 'Day shift') ?></td><td><?= adminEscape(implode(', ', json_decode($schedule['work_days'], true) ?: [])) ?></td><td><?= (int)$schedule['grace_period_minutes'] ?> min / <?= (int)$schedule['break_duration_minutes'] ?> min</td><td><?= number_format((float)$schedule['required_hours'], 2) ?> h</td></tr><?php endforeach; ?>
-<?php if (!$schedules): ?><tr><td colspan="5">No schedules configured.</td></tr><?php endif; ?>
-</tbody></table></div></div>
-<div class="card"><div class="card-header"><h3>Recent Assignments</h3></div><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Employee</th><th>Schedule</th><th>Effective</th></tr></thead><tbody>
-<?php foreach ($assignments as $assignment): ?><tr><td><?= adminEscape($assignment['full_name']) ?><br><?= adminEscape($assignment['employee_code']) ?></td><td><?= adminEscape($assignment['schedule_name']) ?><br><?= adminEscape(date('g:i A', strtotime($assignment['time_in'])) . ' – ' . date('g:i A', strtotime($assignment['time_out']))) ?></td><td><?= adminEscape(date('M j, Y', strtotime($assignment['effective_date']))) ?></td></tr><?php endforeach; ?>
-<?php if (!$assignments): ?><tr><td colspan="3">No schedule assignments yet.</td></tr><?php endif; ?>
-</tbody></table></div></div>
+<section class="schedule-banner">
+    <div>
+        <p class="schedule-kicker"><?= uiIcon('calendar') ?> Workforce planning</p>
+        <h2>Build a better rhythm for your team.</h2>
+        <p>Define reliable shifts, then assign them with a clear effective date.</p>
+    </div>
+    <div class="schedule-banner-mark" aria-hidden="true">
+        <span><?= uiIcon('clock') ?></span>
+        <small>SHIFT PLANNER</small>
+    </div>
+</section>
+
+<section class="schedule-summary" aria-label="Schedule overview">
+    <article class="schedule-summary-item">
+        <span class="schedule-summary-icon"><?= uiIcon('calendar-check') ?></span>
+        <div><strong><?= count($schedules) ?></strong><span>Saved schedules</span></div>
+    </article>
+    <article class="schedule-summary-item">
+        <span class="schedule-summary-icon"><?= uiIcon('users') ?></span>
+        <div><strong><?= count($employees) ?></strong><span>Active employees</span></div>
+    </article>
+    <article class="schedule-summary-item">
+        <span class="schedule-summary-icon"><?= uiIcon('clipboard') ?></span>
+        <div><strong><?= count($assignments) ?></strong><span>Recent assignments</span></div>
+    </article>
+</section>
+
+<div class="schedule-workspace">
+    <section class="card schedule-panel schedule-builder" aria-labelledby="schedule-create-title">
+        <div class="schedule-panel-heading">
+            <div>
+                <p class="schedule-kicker">01 / DEFINE</p>
+                <h2 id="schedule-create-title">Create a schedule</h2>
+                <p>Set the hours, working days, and attendance rules.</p>
+            </div>
+            <span class="schedule-heading-icon"><?= uiIcon('calendar-check') ?></span>
+        </div>
+
+        <form method="post" class="schedule-form">
+            <?= csrfInput() ?>
+            <input type="hidden" name="action" value="create_schedule">
+
+            <label class="form-group schedule-form-wide">
+                <span class="form-label">Schedule name</span>
+                <input class="form-control" name="schedule_name" maxlength="150" placeholder="e.g. Morning shift" required>
+            </label>
+
+            <label class="form-group">
+                <span class="form-label">Time in</span>
+                <input class="form-control" type="time" name="time_in" required>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Time out</span>
+                <input class="form-control" type="time" name="time_out" required>
+            </label>
+
+            <fieldset class="schedule-days schedule-form-wide">
+                <legend class="form-label">Work days</legend>
+                <div class="schedule-day-options">
+                    <?php foreach (['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as $day): ?>
+                    <label class="schedule-day-choice">
+                        <input type="checkbox" name="work_days[]" value="<?= $day ?>" <?= in_array($day, ['Mon','Tue','Wed','Thu','Fri'], true) ? 'checked' : '' ?>>
+                        <span><?= $day ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </fieldset>
+
+            <div class="schedule-rule-grid schedule-form-wide">
+                <label class="form-group">
+                    <span class="form-label">Grace period</span>
+                    <span class="schedule-input-with-unit"><input class="form-control" type="number" min="0" max="240" name="grace_period_minutes" value="15" required><span>min</span></span>
+                </label>
+                <label class="form-group">
+                    <span class="form-label">Break duration</span>
+                    <span class="schedule-input-with-unit"><input class="form-control" type="number" min="0" max="480" name="break_duration_minutes" value="60" required><span>min</span></span>
+                </label>
+                <label class="form-group">
+                    <span class="form-label">Required hours</span>
+                    <span class="schedule-input-with-unit"><input class="form-control" type="number" min="0.25" max="24" step="0.25" name="required_hours" value="8" required><span>hrs</span></span>
+                </label>
+            </div>
+
+            <div class="schedule-form-footer schedule-form-wide">
+                <label class="schedule-overnight">
+                    <input type="checkbox" name="is_overnight" value="1">
+                    <span class="schedule-checkbox-mark"></span>
+                    <span><strong>Overnight shift</strong><small>Ends on the following day</small></span>
+                </label>
+                <button class="btn btn-primary" type="submit"><?= uiIcon('calendar-check') ?> Create schedule</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card schedule-panel schedule-assigner" aria-labelledby="schedule-assign-title">
+        <div class="schedule-panel-heading">
+            <div>
+                <p class="schedule-kicker">02 / ASSIGN</p>
+                <h2 id="schedule-assign-title">Assign a shift</h2>
+                <p>Choose an employee and when the schedule takes effect.</p>
+            </div>
+            <span class="schedule-heading-icon"><?= uiIcon('users') ?></span>
+        </div>
+
+        <?php if ($employees && $schedules): ?>
+        <form method="post" class="schedule-assign-form">
+            <?= csrfInput() ?>
+            <input type="hidden" name="action" value="assign_schedule">
+            <label class="form-group">
+                <span class="form-label">Employee</span>
+                <select class="form-control" name="employee_id" required>
+                    <?php foreach ($employees as $employee): ?>
+                    <option value="<?= (int)$employee['id'] ?>"><?= adminEscape($employee['full_name'] . ' (' . $employee['employee_code'] . ')') ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Schedule</span>
+                <select class="form-control" name="schedule_id" required>
+                    <?php foreach ($schedules as $schedule): ?>
+                    <option value="<?= (int)$schedule['id'] ?>"><?= adminEscape($schedule['schedule_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Effective date</span>
+                <input class="form-control" type="date" name="effective_date" value="<?= date('Y-m-d') ?>" required>
+            </label>
+            <button class="btn btn-primary" type="submit"><?= uiIcon('check') ?> Assign schedule</button>
+        </form>
+        <?php else: ?>
+        <div class="schedule-empty-state">
+            <span><?= uiIcon('clipboard') ?></span>
+            <strong>Ready when you are</strong>
+            <p><?= !$schedules ? 'Create a schedule first' : 'Add an active employee first' ?>, then you can assign shifts here.</p>
+        </div>
+        <?php endif; ?>
+    </section>
+</div>
+
+<section class="card schedule-panel schedule-library" aria-labelledby="schedule-library-title">
+    <div class="schedule-section-heading">
+        <div>
+            <p class="schedule-kicker">THE LIBRARY</p>
+            <h2 id="schedule-library-title">Saved schedules</h2>
+        </div>
+        <span class="schedule-count"><?= count($schedules) ?> total</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped schedule-table">
+            <thead><tr><th>Schedule</th><th>Work days</th><th>Shift</th><th>Grace / break</th><th>Required</th></tr></thead>
+            <tbody>
+            <?php foreach ($schedules as $schedule): ?>
+                <?php $workDays = json_decode($schedule['work_days'], true) ?: []; ?>
+                <tr>
+                    <td>
+                        <div class="schedule-name-cell">
+                            <span class="schedule-row-icon"><?= uiIcon('clock') ?></span>
+                            <span><strong><?= adminEscape($schedule['schedule_name']) ?></strong><small><?= adminEscape(date('g:i A', strtotime($schedule['time_in'])) . ' - ' . date('g:i A', strtotime($schedule['time_out']))) ?></small></span>
+                        </div>
+                    </td>
+                    <td><div class="schedule-day-list"><?php foreach ($workDays as $day): ?><span><?= adminEscape($day) ?></span><?php endforeach; ?></div></td>
+                    <td><span class="schedule-shift-tag <?= $schedule['is_overnight'] ? 'is-overnight' : '' ?>"><?= adminEscape($schedule['is_overnight'] ? 'Overnight' : 'Day shift') ?></span></td>
+                    <td><?= (int)$schedule['grace_period_minutes'] ?> min <span class="schedule-cell-muted">/</span> <?= (int)$schedule['break_duration_minutes'] ?> min</td>
+                    <td><strong><?= number_format((float)$schedule['required_hours'], 2) ?> h</strong></td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (!$schedules): ?><tr><td colspan="5"><div class="schedule-table-empty"><?= uiIcon('calendar') ?> No schedules yet. Create your first shift above.</div></td></tr><?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card schedule-panel schedule-assignments" aria-labelledby="schedule-assignment-title">
+    <div class="schedule-section-heading">
+        <div>
+            <p class="schedule-kicker">TEAM ROTATION</p>
+            <h2 id="schedule-assignment-title">Recent assignments</h2>
+        </div>
+        <span class="schedule-count">Latest <?= count($assignments) ?></span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped schedule-table assignment-table">
+            <thead><tr><th>Employee</th><th>Assigned schedule</th><th>Effective date</th></tr></thead>
+            <tbody>
+            <?php foreach ($assignments as $assignment): ?>
+                <tr>
+                    <td><strong><?= adminEscape($assignment['full_name']) ?></strong><small class="schedule-subcell"><?= adminEscape($assignment['employee_code']) ?></small></td>
+                    <td><strong><?= adminEscape($assignment['schedule_name']) ?></strong><small class="schedule-subcell"><?= adminEscape(date('g:i A', strtotime($assignment['time_in'])) . ' - ' . date('g:i A', strtotime($assignment['time_out']))) ?></small></td>
+                    <td><time datetime="<?= adminEscape($assignment['effective_date']) ?>"><?= adminEscape(date('M j, Y', strtotime($assignment['effective_date']))) ?></time></td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (!$assignments): ?><tr><td colspan="3"><div class="schedule-table-empty"><?= uiIcon('users') ?> No employee assignments yet.</div></td></tr><?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
 <?php adminPageEnd(); ?>
